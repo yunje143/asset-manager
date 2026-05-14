@@ -7,6 +7,34 @@ pub use backup::setup_backup;
 use anyhow::{Context, Result};
 use rusqlite::Connection;
 use std::path::PathBuf;
+use std::sync::Mutex;
+
+// Global database path storage
+static DB_PATH: Mutex<Option<PathBuf>> = Mutex::new(None);
+
+/// Set the database path for global access
+pub fn set_db_path(path: PathBuf) {
+    if let Ok(mut db_path) = DB_PATH.lock() {
+        *db_path = Some(path);
+    }
+}
+
+/// Get a database connection using the globally stored path
+pub fn get_connection() -> Result<Connection> {
+    let db_path = DB_PATH
+        .lock()
+        .map_err(|e| anyhow::anyhow!("Failed to lock DB path: {}", e))?
+        .clone()
+        .context("Database path not initialized")?;
+
+    let conn = Connection::open(&db_path)
+        .context(format!("Failed to open database at {:?}", db_path))?;
+
+    conn.execute("PRAGMA foreign_keys = ON;", [])
+        .context("Failed to enable foreign keys")?;
+
+    Ok(conn)
+}
 
 /// Initialize database connection and perform setup
 pub fn initialize_database(db_path: &PathBuf) -> Result<Connection> {

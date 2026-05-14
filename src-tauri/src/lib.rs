@@ -1,4 +1,5 @@
 mod db;
+mod api;
 
 use anyhow::Result;
 use std::path::PathBuf;
@@ -43,10 +44,13 @@ fn get_database_path(app_handle: &tauri::AppHandle) -> Result<PathBuf> {
 fn setup_database_on_startup(app_handle: &tauri::AppHandle) -> Result<()> {
     let db_path = get_database_path(app_handle)?;
     log::info!("Setting up database at: {:?}", db_path);
-    
+
+    // Set global DB path for commands to use
+    db::set_db_path(db_path.clone());
+
     db::setup_database(&db_path)?;
     log::info!("Database setup completed successfully");
-    
+
     Ok(())
 }
 
@@ -69,7 +73,24 @@ pub fn run() {
             }
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![greet])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .invoke_handler(tauri::generate_handler![
+            greet,
+            // Properties
+            api::get_properties,
+            api::get_property,
+            api::create_property,
+            api::update_property,
+            api::delete_property,
+            // Units
+            api::get_units,
+            api::create_unit,
+            // Incomes
+            api::get_incomes,
+            api::create_income,
+            // Dashboard
+            api::get_dashboard_summary,
+        ])
+        .build(tauri::generate_context!())
+        .expect("error building tauri application")
+        .run(|_app_handle, _event| {});
 }
