@@ -72,7 +72,7 @@ export function Dashboard() {
         />
         <SummaryCard
           title="Monthly Income"
-          value={`¥${summary.total_income_this_month.toLocaleString("en-US", {
+          value={`¥${summary.total_income_this_month.toLocaleString('ja-JP', {
             minimumFractionDigits: 0,
             maximumFractionDigits: 0,
           })}`}
@@ -94,12 +94,18 @@ export function Dashboard() {
           <div className="space-y-4">
             <MetricRow
               label="Total Income"
-              value={`¥${summary.total_income_this_month.toLocaleString()}`}
+              value={`¥${summary.total_income_this_month.toLocaleString('ja-JP', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0,
+              })}`}
               color="text-emerald-600"
             />
             <MetricRow
               label="Total Expenses"
-              value={`¥${summary.total_expense_this_month.toLocaleString()}`}
+              value={`¥${summary.total_expense_this_month.toLocaleString('ja-JP', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0,
+              })}`}
               color="text-red-600"
             />
             <div className="border-t pt-4">
@@ -108,7 +114,10 @@ export function Dashboard() {
                 value={`¥${(
                   summary.total_income_this_month -
                   summary.total_expense_this_month
-                ).toLocaleString()}`}
+                ).toLocaleString('ja-JP', {
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 0,
+                })}`}
                 color="text-blue-600"
                 bold
               />
@@ -123,7 +132,10 @@ export function Dashboard() {
           <div className="space-y-4">
             <MetricRow
               label="Total Asset Value"
-              value={`¥${summary.total_asset_value.toLocaleString()}`}
+              value={`¥${summary.total_asset_value.toLocaleString('ja-JP', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0,
+              })}`}
               color="text-blue-600"
             />
             <MetricRow
@@ -178,10 +190,16 @@ export function Dashboard() {
                       {prop.property_type}
                     </td>
                     <td className="px-6 py-4 text-right text-sm text-gray-900">
-                      ¥{prop.purchase_price.toLocaleString()}
+                      ¥{prop.purchase_price.toLocaleString('ja-JP', {
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 0,
+                      })}
                     </td>
                     <td className="px-6 py-4 text-right text-sm text-emerald-600 font-medium">
-                      ¥{prop.monthly_income.toLocaleString()}
+                      ¥{prop.monthly_income.toLocaleString('ja-JP', {
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 0,
+                      })}
                     </td>
                     <td className="px-6 py-4 text-right">
                       <span className={`text-sm font-medium ${

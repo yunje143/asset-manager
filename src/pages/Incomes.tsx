@@ -71,6 +71,21 @@ export function Incomes() {
     return unit ? `${unit.room_number}` : `Unit #${unitId}`;
   }
 
+  function handleAmountChange(value: string) {
+    // 数字だけを抽出
+    const numericValue = value.replace(/\D/g, '');
+    setFormData({
+      ...formData,
+      amount: numericValue,
+    });
+  }
+
+  function getDisplayAmount(): string {
+    return formData.amount
+      ? parseInt(formData.amount).toLocaleString('ja-JP')
+      : '';
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -114,17 +129,26 @@ export function Incomes() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <SummaryCard
           title="Total Income"
-          value={`¥${totalIncome.toLocaleString()}`}
+          value={`¥${totalIncome.toLocaleString('ja-JP', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+          })}`}
           color="bg-blue-50 text-blue-600"
         />
         <SummaryCard
           title="Pending"
-          value={`¥${pendingIncome.toLocaleString()}`}
+          value={`¥${pendingIncome.toLocaleString('ja-JP', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+          })}`}
           color="bg-yellow-50 text-yellow-600"
         />
         <SummaryCard
           title="Completed"
-          value={`¥${completedIncome.toLocaleString()}`}
+          value={`¥${completedIncome.toLocaleString('ja-JP', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+          })}`}
           color="bg-emerald-50 text-emerald-600"
         />
       </div>
@@ -156,13 +180,10 @@ export function Incomes() {
                   Amount (¥)
                 </label>
                 <input
-                  type="number"
+                  type="text"
                   required
-                  step="0.01"
-                  value={formData.amount}
-                  onChange={(e) =>
-                    setFormData({ ...formData, amount: e.target.value })
-                  }
+                  value={getDisplayAmount()}
+                  onChange={(e) => handleAmountChange(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="0"
                 />
@@ -280,7 +301,10 @@ export function Incomes() {
                       {getUnitLabel(income.unit_id)}
                     </td>
                     <td className="px-6 py-4 text-right text-sm font-medium text-emerald-600">
-                      ¥{income.amount.toLocaleString()}
+                      ¥{income.amount.toLocaleString('ja-JP', {
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 0,
+                      })}
                     </td>
                     <td className="px-6 py-4 text-sm">
                       <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
