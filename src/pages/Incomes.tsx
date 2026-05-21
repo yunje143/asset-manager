@@ -16,6 +16,7 @@ export function Incomes() {
     category: "Rent",
     unit_id: "",
     note: "",
+    status: "completed",
   });
 
   useEffect(() => {
@@ -53,7 +54,8 @@ export function Incomes() {
           parseFloat(formData.amount),
           formData.category,
           formData.unit_id ? parseInt(formData.unit_id) : null,
-          formData.note || undefined
+          formData.note || undefined,
+          formData.status
         );
         setIncomes(incomes.map((i) => (i.id === editingIncomeId ? updatedIncome : i)));
       } else {
@@ -63,7 +65,8 @@ export function Incomes() {
           parseFloat(formData.amount),
           formData.category,
           formData.unit_id ? parseInt(formData.unit_id) : null,
-          formData.note || undefined
+          formData.note || undefined,
+          formData.status
         );
         setIncomes([newIncome, ...incomes]);
       }
@@ -76,6 +79,7 @@ export function Incomes() {
         category: "Rent",
         unit_id: "",
         note: "",
+        status: "completed",
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save income");
@@ -91,6 +95,7 @@ export function Incomes() {
       category: income.category,
       unit_id: income.unit_id ? income.unit_id.toString() : "",
       note: income.note || "",
+      status: income.status,
     });
     setShowForm(true);
   }
@@ -104,6 +109,7 @@ export function Incomes() {
       category: "Rent",
       unit_id: "",
       note: "",
+      status: "completed",
     });
   }
 
@@ -243,6 +249,21 @@ export function Incomes() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="e.g., Rent, Deposit"
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Status
+                </label>
+                <select
+                  value={formData.status}
+                  onChange={(e) =>
+                    setFormData({ ...formData, status: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="completed">Completed (完了)</option>
+                  <option value="pending">Pending (待ち)</option>
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">

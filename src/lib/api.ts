@@ -98,7 +98,8 @@ export async function createIncome(
   amount: number,
   category: string,
   unit_id: number | null,
-  note?: string
+  note?: string,
+  status?: string
 ): Promise<Income> {
   return invoke("create_income", {
     req: {
@@ -107,6 +108,7 @@ export async function createIncome(
       category,
       unit_id,
       note,
+      status,
     },
   });
 }
@@ -117,7 +119,8 @@ export async function updateIncome(
   amount: number,
   category: string,
   unit_id: number | null,
-  note?: string
+  note?: string,
+  status?: string
 ): Promise<Income> {
   return invoke("update_income", {
     id,
@@ -127,6 +130,7 @@ export async function updateIncome(
       category,
       unit_id,
       note,
+      status,
     },
   });
 }
