@@ -87,6 +87,12 @@ pub fn run() {
             // Incomes
             api::get_incomes,
             api::create_income,
+            api::update_income,
+            // Expenses
+            api::get_expenses,
+            api::create_expense,
+            api::update_expense,
+            api::delete_expense,
             // Dashboard
             api::get_dashboard_summary,
         ])

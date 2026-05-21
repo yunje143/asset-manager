@@ -3,6 +3,7 @@ import {
   Property,
   Unit,
   Income,
+  Expense,
   DashboardSummary,
 } from "../types";
 
@@ -108,6 +109,78 @@ export async function createIncome(
       note,
     },
   });
+}
+
+export async function updateIncome(
+  id: number,
+  date: string,
+  amount: number,
+  category: string,
+  unit_id: number | null,
+  note?: string
+): Promise<Income> {
+  return invoke("update_income", {
+    id,
+    req: {
+      date,
+      amount,
+      category,
+      unit_id,
+      note,
+    },
+  });
+}
+
+// ===================== Expenses =====================
+
+export async function getExpenses(property_id?: number): Promise<Expense[]> {
+  return invoke("get_expenses", { property_id });
+}
+
+export async function createExpense(
+  date: string,
+  amount: number,
+  category: string,
+  property_id: number,
+  unit_id?: number | null,
+  note?: string
+): Promise<Expense> {
+  return invoke("create_expense", {
+    req: {
+      date,
+      amount,
+      category,
+      property_id,
+      unit_id,
+      note,
+    },
+  });
+}
+
+export async function updateExpense(
+  id: number,
+  date: string,
+  amount: number,
+  category: string,
+  property_id: number,
+  unit_id?: number | null,
+  note?: string
+): Promise<Expense> {
+  return invoke("update_expense", {
+    id,
+    req: {
+      date,
+      amount,
+      category,
+      property_id,
+      unit_id,
+      note,
+    },
+  });
+}
+
+export async function deleteExpense(id: number): Promise<void> {
+  return invoke("delete_expense", { id });
 }
 
 // ===================== Dashboard =====================

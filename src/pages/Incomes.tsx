@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { getIncomes, getUnits, createIncome } from "../lib/api";
+import { getIncomes, getUnits, createIncome, updateIncome } from "../lib/api";
 import { Income, Unit } from "../types";
-import { AlertCircle, Plus, DollarSign } from "lucide-react";
+import { AlertCircle, Plus, DollarSign, Edit2, Trash2 } from "lucide-react";
 
 export function Incomes() {
   const [incomes, setIncomes] = useState<Income[]>([]);
@@ -9,6 +9,7 @@ export function Incomes() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [editingIncomeId, setEditingIncomeId] = useState<number | null>(null);
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split("T")[0],
     amount: "",
@@ -39,19 +40,36 @@ export function Incomes() {
     }
   }
 
-  async function handleAddIncome(e: React.FormEvent) {
+  async function handleSaveIncome(e: React.FormEvent) {
     e.preventDefault();
     try {
       setError(null);
-      const newIncome = await createIncome(
-        formData.date,
-        parseFloat(formData.amount),
-        formData.category,
-        formData.unit_id ? parseInt(formData.unit_id) : null,
-        formData.note || undefined
-      );
-      setIncomes([newIncome, ...incomes]);
+      
+      if (editingIncomeId) {
+        // Update existing income
+        const updatedIncome = await updateIncome(
+          editingIncomeId,
+          formData.date,
+          parseFloat(formData.amount),
+          formData.category,
+          formData.unit_id ? parseInt(formData.unit_id) : null,
+          formData.note || undefined
+        );
+        setIncomes(incomes.map((i) => (i.id === editingIncomeId ? updatedIncome : i)));
+      } else {
+        // Create new income
+        const newIncome = await createIncome(
+          formData.date,
+          parseFloat(formData.amount),
+          formData.category,
+          formData.unit_id ? parseInt(formData.unit_id) : null,
+          formData.note || undefined
+        );
+        setIncomes([newIncome, ...incomes]);
+      }
+      
       setShowForm(false);
+      setEditingIncomeId(null);
       setFormData({
         date: new Date().toISOString().split("T")[0],
         amount: "",
@@ -60,9 +78,33 @@ export function Incomes() {
         note: "",
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create income");
-      console.error("Create income error:", err);
+      setError(err instanceof Error ? err.message : "Failed to save income");
+      console.error("Save income error:", err);
     }
+  }
+
+  function handleEditIncome(income: Income) {
+    setEditingIncomeId(income.id);
+    setFormData({
+      date: income.date,
+      amount: income.amount.toString(),
+      category: income.category,
+      unit_id: income.unit_id ? income.unit_id.toString() : "",
+      note: income.note || "",
+    });
+    setShowForm(true);
+  }
+
+  function handleCancelEdit() {
+    setShowForm(false);
+    setEditingIncomeId(null);
+    setFormData({
+      date: new Date().toISOString().split("T")[0],
+      amount: "",
+      category: "Rent",
+      unit_id: "",
+      note: "",
+    });
   }
 
   function getUnitLabel(unitId: number | null): string {
@@ -153,13 +195,13 @@ export function Incomes() {
         />
       </div>
 
-      {/* Add Income Form */}
+      {/* Add/Edit Income Form */}
       {showForm && (
         <div className="bg-white rounded-lg shadow p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Add New Income
+            {editingIncomeId ? "Edit Income" : "Add New Income"}
           </h3>
-          <form onSubmit={handleAddIncome} className="space-y-4">
+          <form onSubmit={handleSaveIncome} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -241,11 +283,11 @@ export function Incomes() {
                 type="submit"
                 className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium"
               >
-                Add Income
+                {editingIncomeId ? "Update Income" : "Add Income"}
               </button>
               <button
                 type="button"
-                onClick={() => setShowForm(false)}
+                onClick={handleCancelEdit}
                 className="flex-1 bg-gray-200 text-gray-900 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors font-medium"
               >
                 Cancel
@@ -288,6 +330,9 @@ export function Incomes() {
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
                     Note
                   </th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -317,6 +362,15 @@ export function Incomes() {
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600">
                       {income.note || "-"}
+                    </td>
+                    <td className="px-6 py-4 text-sm space-x-2 flex">
+                      <button
+                        onClick={() => handleEditIncome(income)}
+                        className="inline-flex items-center gap-1 px-2 py-1 text-gray-700 border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+                      >
+                        <Edit2 className="w-3 h-3" />
+                        <span className="text-xs">Edit</span>
+                      </button>
                     </td>
                   </tr>
                 ))}

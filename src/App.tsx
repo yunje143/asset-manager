@@ -4,6 +4,7 @@ import { Layout } from "./components/Layout";
 import { Dashboard } from "./pages/Dashboard";
 import { Properties } from "./pages/Properties";
 import { Incomes } from "./pages/Incomes";
+import { Expenses } from "./pages/Expenses";
 
 function App() {
   const [currentPage, setCurrentPage] = useState("dashboard");
@@ -16,6 +17,8 @@ function App() {
         return <Properties />;
       case "incomes":
         return <Incomes />;
+      case "expenses":
+        return <Expenses />;
       case "analytics":
         return (
           <div className="text-center py-12">

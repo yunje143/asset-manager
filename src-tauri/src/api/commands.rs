@@ -274,6 +274,36 @@ pub async fn create_income(req: CreateIncomeRequest) -> Result<Income, String> {
         .map_err(|e| format!("Failed to retrieve created income: {}", e))
 }
 
+#[tauri::command]
+pub async fn update_income(id: i64, req: CreateIncomeRequest) -> Result<Income, String> {
+    let conn = get_connection().map_err(|e| e.to_string())?;
+
+    let now = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
+    let status = req.status.unwrap_or_else(|| "pending".to_string());
+
+    conn.execute(
+        "UPDATE incomes SET date = ?1, amount = ?2, category = ?3, unit_id = ?4, status = ?5, note = ?6, updated_at = ?7 WHERE id = ?8",
+        params![
+            req.date,
+            req.amount,
+            req.category,
+            req.unit_id,
+            status,
+            req.note,
+            now,
+            id
+        ],
+    )
+    .map_err(|e| format!("Failed to update income: {}", e))?;
+
+    let mut stmt = conn
+        .prepare("SELECT id, date, amount, category, unit_id, status, source_type, external_ref_id, note, created_at, updated_at FROM incomes WHERE id = ?1")
+        .map_err(|e| e.to_string())?;
+
+    stmt.query_row(params![id], parse_income_row)
+        .map_err(|e| format!("Failed to retrieve updated income: {}", e))
+}
+
 // ===================== Dashboard Commands =====================
 
 #[tauri::command]
@@ -401,4 +431,112 @@ pub async fn get_dashboard_summary() -> Result<DashboardSummary, String> {
         weighted_yield_percent,
         properties: property_summaries,
     })
+}
+
+// ===================== Expenses Commands =====================
+
+#[tauri::command]
+pub async fn get_expenses(property_id: Option<i64>) -> Result<Vec<Expense>, String> {
+    let conn = get_connection().map_err(|e| e.to_string())?;
+
+    let query = if property_id.is_some() {
+        "SELECT id, date, amount, category, property_id, unit_id, note, created_at, updated_at FROM expenses WHERE property_id = ?1 ORDER BY date DESC"
+    } else {
+        "SELECT id, date, amount, category, property_id, unit_id, note, created_at, updated_at FROM expenses ORDER BY date DESC"
+    };
+
+    let mut stmt = conn.prepare(query).map_err(|e| e.to_string())?;
+
+    let expenses = if let Some(p_id) = property_id {
+        stmt.query_map(params![p_id], parse_expense_row)
+    } else {
+        stmt.query_map([], parse_expense_row)
+    }
+    .map_err(|e| e.to_string())?
+    .collect::<Result<Vec<_>, _>>()
+    .map_err(|e| e.to_string())?;
+
+    Ok(expenses)
+}
+
+fn parse_expense_row(row: &rusqlite::Row) -> rusqlite::Result<Expense> {
+    Ok(Expense {
+        id: row.get(0)?,
+        date: row.get(1)?,
+        amount: row.get(2)?,
+        category: row.get(3)?,
+        property_id: row.get(4)?,
+        unit_id: row.get(5)?,
+        note: row.get(6)?,
+        created_at: row.get(7)?,
+        updated_at: row.get(8)?,
+    })
+}
+
+#[tauri::command]
+pub async fn create_expense(req: CreateExpenseRequest) -> Result<Expense, String> {
+    let conn = get_connection().map_err(|e| e.to_string())?;
+
+    let now = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
+
+    conn.execute(
+        "INSERT INTO expenses (date, amount, category, property_id, unit_id, note, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+        params![
+            req.date,
+            req.amount,
+            req.category,
+            req.property_id,
+            req.unit_id,
+            req.note,
+            now,
+            now
+        ],
+    )
+    .map_err(|e| format!("Failed to insert expense: {}", e))?;
+
+    let expense_id = conn.last_insert_rowid();
+
+    let mut stmt = conn
+        .prepare("SELECT id, date, amount, category, property_id, unit_id, note, created_at, updated_at FROM expenses WHERE id = ?1")
+        .map_err(|e| e.to_string())?;
+
+    stmt.query_row(params![expense_id], parse_expense_row)
+        .map_err(|e| format!("Failed to retrieve created expense: {}", e))
+}
+
+#[tauri::command]
+pub async fn update_expense(id: i64, req: CreateExpenseRequest) -> Result<Expense, String> {
+    let conn = get_connection().map_err(|e| e.to_string())?;
+
+    let now = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
+
+    conn.execute(
+        "UPDATE expenses SET date = ?1, amount = ?2, category = ?3, property_id = ?4, unit_id = ?5, note = ?6, updated_at = ?7 WHERE id = ?8",
+        params![
+            req.date,
+            req.amount,
+            req.category,
+            req.property_id,
+            req.unit_id,
+            req.note,
+            now,
+            id
+        ],
+    )
+    .map_err(|e| format!("Failed to update expense: {}", e))?;
+
+    let mut stmt = conn
+        .prepare("SELECT id, date, amount, category, property_id, unit_id, note, created_at, updated_at FROM expenses WHERE id = ?1")
+        .map_err(|e| e.to_string())?;
+
+    stmt.query_row(params![id], parse_expense_row)
+        .map_err(|e| format!("Failed to retrieve updated expense: {}", e))
+}
+
+#[tauri::command]
+pub async fn delete_expense(id: i64) -> Result<(), String> {
+    let conn = get_connection().map_err(|e| e.to_string())?;
+    conn.execute("DELETE FROM expenses WHERE id = ?1", params![id])
+        .map_err(|e| e.to_string())?;
+    Ok(())
 }

@@ -5,6 +5,7 @@ import {
   DollarSign,
   TrendingUp,
   BarChart3,
+  Wallet,
 } from "lucide-react";
 
 interface LayoutProps {
@@ -47,6 +48,12 @@ export function Layout({
             label="Incomes"
             active={currentPage === "incomes"}
             onClick={() => onNavigate("incomes")}
+          />
+          <NavItem
+            icon={<Wallet className="w-5 h-5" />}
+            label="Expenses"
+            active={currentPage === "expenses"}
+            onClick={() => onNavigate("expenses")}
           />
           <NavItem
             icon={<TrendingUp className="w-5 h-5" />}
