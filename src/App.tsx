@@ -5,6 +5,7 @@ import { Dashboard } from "./pages/Dashboard";
 import { Properties } from "./pages/Properties";
 import { Incomes } from "./pages/Incomes";
 import { Expenses } from "./pages/Expenses";
+import { Analytics } from "./pages/Analytics";
 
 function App() {
   const [currentPage, setCurrentPage] = useState("dashboard");
@@ -20,11 +21,7 @@ function App() {
       case "expenses":
         return <Expenses />;
       case "analytics":
-        return (
-          <div className="text-center py-12">
-            <p className="text-gray-500 text-lg">Analytics coming soon</p>
-          </div>
-        );
+        return <Analytics />;
       default:
         return <Dashboard />;
     }

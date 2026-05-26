@@ -85,3 +85,25 @@ export interface DashboardSummary {
   weighted_yield_percent: number;
   properties: PropertySummary[];
 }
+
+// Forecast Data for Analytics
+export interface MonthlyForecastData {
+  month: string;
+  income: number;
+  expense: number;
+  net_cash_flow: number;
+}
+
+export interface PropertyForecast {
+  id: number;
+  name: string;
+  monthly_avg_income: number;
+  monthly_avg_expense: number;
+  estimated_yield_percent: number;
+}
+
+export interface ForecastSummary {
+  timeline_months: number;
+  monthly_data: MonthlyForecastData[];
+  properties: PropertyForecast[];
+}

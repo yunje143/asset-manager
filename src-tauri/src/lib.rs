@@ -93,6 +93,8 @@ pub fn run() {
             api::create_expense,
             api::update_expense,
             api::delete_expense,
+            // Analytics
+            api::get_forecast_summary,
             // Dashboard
             api::get_dashboard_summary,
         ])

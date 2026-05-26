@@ -540,3 +540,150 @@ pub async fn delete_expense(id: i64) -> Result<(), String> {
         .map_err(|e| e.to_string())?;
     Ok(())
 }
+
+// ===================== Analytics Commands =====================
+
+#[tauri::command]
+pub async fn get_forecast_summary(timeline_months: i32) -> Result<ForecastSummary, String> {
+    let conn = get_connection().map_err(|e| e.to_string())?;
+
+    // Calculate date range: last 12 months
+    let now = Local::now();
+    let twelve_months_ago = now - chrono::Duration::days(365);
+
+    let from_date = twelve_months_ago.format("%Y-%m-01").to_string();
+    let to_date = now.format("%Y-%m-%d").to_string();
+
+    // Get completed incomes for the past 12 months
+    let mut stmt = conn
+        .prepare("SELECT strftime('%Y-%m', date) as month, COALESCE(SUM(amount), 0) as total FROM incomes WHERE date >= ?1 AND date <= ?2 AND status = 'completed' GROUP BY strftime('%Y-%m', date) ORDER BY month")
+        .map_err(|e| e.to_string())?;
+
+    let monthly_incomes: std::collections::BTreeMap<String, f64> = stmt
+        .query_map(params![&from_date, &to_date], |row| {
+            let month: String = row.get(0)?;
+            let total: f64 = row.get(1)?;
+            Ok((month, total))
+        })
+        .map_err(|e| e.to_string())?
+        .collect::<Result<std::collections::BTreeMap<_, _>, _>>()
+        .map_err(|e| e.to_string())?;
+
+    // Get expenses for the past 12 months
+    let mut stmt = conn
+        .prepare("SELECT strftime('%Y-%m', date) as month, COALESCE(SUM(amount), 0) as total FROM expenses WHERE date >= ?1 AND date <= ?2 GROUP BY strftime('%Y-%m', date) ORDER BY month")
+        .map_err(|e| e.to_string())?;
+
+    let monthly_expenses: std::collections::BTreeMap<String, f64> = stmt
+        .query_map(params![&from_date, &to_date], |row| {
+            let month: String = row.get(0)?;
+            let total: f64 = row.get(1)?;
+            Ok((month, total))
+        })
+        .map_err(|e| e.to_string())?
+        .collect::<Result<std::collections::BTreeMap<_, _>, _>>()
+        .map_err(|e| e.to_string())?;
+
+    // Calculate averages per month
+    let avg_income = if !monthly_incomes.is_empty() {
+        monthly_incomes.values().sum::<f64>() / monthly_incomes.len() as f64
+    } else {
+        0.0
+    };
+
+    let avg_expense = if !monthly_expenses.is_empty() {
+        monthly_expenses.values().sum::<f64>() / monthly_expenses.len() as f64
+    } else {
+        0.0
+    };
+
+    // Generate forecast for the requested timeline
+    let mut monthly_data = Vec::new();
+    for i in 0..timeline_months {
+        let forecast_date = now + chrono::Duration::days(i as i64 * 30);
+        let month_str = forecast_date.format("%Y-%m").to_string();
+
+        monthly_data.push(MonthlyForecastData {
+            month: month_str,
+            income: avg_income,
+            expense: avg_expense,
+            net_cash_flow: avg_income - avg_expense,
+        });
+    }
+
+    // Get properties and calculate forecasts for each
+    let mut stmt = conn
+        .prepare("SELECT id, name, purchase_price FROM properties ORDER BY created_at DESC")
+        .map_err(|e| e.to_string())?;
+
+    let properties_list = stmt
+        .query_map([], |row| {
+            Ok((
+                row.get::<_, i64>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, f64>(2)?,
+            ))
+        })
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+
+    let mut property_forecasts = Vec::new();
+
+    for (prop_id, prop_name, purchase_price) in properties_list {
+        // Get income for this property (via units)
+        let mut stmt = conn
+            .prepare(
+                "SELECT COALESCE(SUM(i.amount), 0) FROM incomes i JOIN units u ON i.unit_id = u.id WHERE u.property_id = ?1 AND i.date >= ?2 AND i.date <= ?3 AND i.status = 'completed'"
+            )
+            .map_err(|e| e.to_string())?;
+
+        let prop_income: f64 = stmt
+            .query_row(params![prop_id, &from_date, &to_date], |row| row.get(0))
+            .unwrap_or(0.0);
+
+        // Calculate monthly average based on the actual count of months with any completed incomes
+        let prop_income_monthly = if !monthly_incomes.is_empty() && prop_income > 0.0 {
+            prop_income / monthly_incomes.len() as f64
+        } else {
+            0.0
+        };
+
+        // Get expenses for this property
+        let mut stmt = conn
+            .prepare(
+                "SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE property_id = ?1 AND date >= ?2 AND date <= ?3"
+            )
+            .map_err(|e| e.to_string())?;
+
+        let prop_expense: f64 = stmt
+            .query_row(params![prop_id, &from_date, &to_date], |row| row.get(0))
+            .unwrap_or(0.0);
+
+        let prop_expense_monthly = if !monthly_expenses.is_empty() && prop_expense > 0.0 {
+            prop_expense / monthly_expenses.len() as f64
+        } else {
+            0.0
+        };
+
+        let estimated_yield = if purchase_price > 0.0 {
+            ((prop_income_monthly - prop_expense_monthly) / purchase_price) * 100.0 * 12.0
+        } else {
+            0.0
+        };
+
+        property_forecasts.push(PropertyForecast {
+            id: prop_id,
+            name: prop_name,
+            monthly_avg_income: prop_income_monthly,
+            monthly_avg_expense: prop_expense_monthly,
+            estimated_yield_percent: estimated_yield,
+        });
+    }
+
+    Ok(ForecastSummary {
+        timeline_months,
+        monthly_data,
+        properties: property_forecasts,
+    })
+}

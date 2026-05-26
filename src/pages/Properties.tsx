@@ -124,9 +124,10 @@ export function Properties() {
   }
 
   function getDisplayPrice(): string {
-    return formData.purchase_price
-      ? parseInt(formData.purchase_price).toLocaleString('ja-JP')
-      : '';
+    if (!formData.purchase_price || formData.purchase_price === '0') {
+      return formData.purchase_price || '';
+    }
+    return parseInt(formData.purchase_price, 10).toLocaleString('ja-JP');
   }
 
   async function handleDeleteProperty(id: number) {
@@ -256,6 +257,11 @@ export function Properties() {
                       purchase_date: e.target.value,
                     })
                   }
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      (e.currentTarget as HTMLInputElement).blur();
+                    }
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>

@@ -49,8 +49,10 @@ export function Expenses() {
   };
 
   const getDisplayAmount = () => {
-    if (!formData.amount) return "";
-    return parseInt(formData.amount).toLocaleString("ja-JP", {
+    if (!formData.amount || formData.amount === '0') {
+      return formData.amount || '';
+    }
+    return parseInt(formData.amount, 10).toLocaleString("ja-JP", {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     });
@@ -195,6 +197,11 @@ export function Expenses() {
                   onChange={(e) =>
                     setFormData((prev) => ({ ...prev, date: e.target.value }))
                   }
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      (e.currentTarget as HTMLInputElement).blur();
+                    }
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>

@@ -167,3 +167,28 @@ impl ApiError {
         }
     }
 }
+
+// Forecast Data for Analytics
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MonthlyForecastData {
+    pub month: String, // "2024-01", "2024-02", etc.
+    pub income: f64,
+    pub expense: f64,
+    pub net_cash_flow: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PropertyForecast {
+    pub id: i64,
+    pub name: String,
+    pub monthly_avg_income: f64,
+    pub monthly_avg_expense: f64,
+    pub estimated_yield_percent: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ForecastSummary {
+    pub timeline_months: i32,
+    pub monthly_data: Vec<MonthlyForecastData>,
+    pub properties: Vec<PropertyForecast>,
+}

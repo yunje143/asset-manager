@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { getIncomes, getUnits, createIncome, updateIncome } from "../lib/api";
 import { Income, Unit } from "../types";
-import { AlertCircle, Plus, DollarSign, Edit2, Trash2 } from "lucide-react";
+import { AlertCircle, Plus, DollarSign, Edit2 } from "lucide-react";
 
 export function Incomes() {
   const [incomes, setIncomes] = useState<Income[]>([]);
@@ -129,9 +129,10 @@ export function Incomes() {
   }
 
   function getDisplayAmount(): string {
-    return formData.amount
-      ? parseInt(formData.amount).toLocaleString('ja-JP')
-      : '';
+    if (!formData.amount || formData.amount === '0') {
+      return formData.amount || '';
+    }
+    return parseInt(formData.amount, 10).toLocaleString('ja-JP');
   }
 
   if (loading) {
@@ -220,6 +221,11 @@ export function Incomes() {
                   onChange={(e) =>
                     setFormData({ ...formData, date: e.target.value })
                   }
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      (e.currentTarget as HTMLInputElement).blur();
+                    }
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>

@@ -5,16 +5,38 @@ import {
   Income,
   Expense,
   DashboardSummary,
+  ForecastSummary,
 } from "../types";
+
+// ===================== Environment Detection =====================
+
+/**
+ * Check if running in Tauri environment (desktop app)
+ */
+function isTauriEnvironment(): boolean {
+  return (window as any).__TAURI_INTERNALS__ !== undefined;
+}
+
+/**
+ * Safely invoke Tauri command with environment check
+ */
+async function safeInvoke<T>(command: string, args: any = {}): Promise<T> {
+  if (!isTauriEnvironment()) {
+    throw new Error(
+      "Tauri backend is not available. This feature only works in the Tauri desktop app, not in the browser."
+    );
+  }
+  return invoke(command, args);
+}
 
 // ===================== Properties =====================
 
 export async function getProperties(): Promise<Property[]> {
-  return invoke("get_properties");
+  return safeInvoke("get_properties");
 }
 
 export async function getProperty(id: number): Promise<Property | null> {
-  return invoke("get_property", { id });
+  return safeInvoke("get_property", { id });
 }
 
 export async function createProperty(
@@ -25,7 +47,7 @@ export async function createProperty(
   purchase_date: string,
   useful_life: number
 ): Promise<Property> {
-  return invoke("create_property", {
+  return safeInvoke("create_property", {
     req: {
       name,
       address,
@@ -46,7 +68,7 @@ export async function updateProperty(
   purchase_date: string,
   useful_life: number
 ): Promise<Property> {
-  return invoke("update_property", {
+  return safeInvoke("update_property", {
     id,
     req: {
       name,
@@ -60,13 +82,13 @@ export async function updateProperty(
 }
 
 export async function deleteProperty(id: number): Promise<void> {
-  return invoke("delete_property", { id });
+  return safeInvoke("delete_property", { id });
 }
 
 // ===================== Units =====================
 
 export async function getUnits(property_id?: number): Promise<Unit[]> {
-  return invoke("get_units", { property_id });
+  return safeInvoke("get_units", { property_id });
 }
 
 export async function createUnit(
@@ -76,7 +98,7 @@ export async function createUnit(
   target_rent: number,
   area_size: number
 ): Promise<Unit> {
-  return invoke("create_unit", {
+  return safeInvoke("create_unit", {
     req: {
       property_id,
       room_number,
@@ -90,7 +112,7 @@ export async function createUnit(
 // ===================== Incomes =====================
 
 export async function getIncomes(unit_id?: number): Promise<Income[]> {
-  return invoke("get_incomes", { unit_id });
+  return safeInvoke("get_incomes", { unit_id });
 }
 
 export async function createIncome(
@@ -101,7 +123,7 @@ export async function createIncome(
   note?: string,
   status?: string
 ): Promise<Income> {
-  return invoke("create_income", {
+  return safeInvoke("create_income", {
     req: {
       date,
       amount,
@@ -122,7 +144,7 @@ export async function updateIncome(
   note?: string,
   status?: string
 ): Promise<Income> {
-  return invoke("update_income", {
+  return safeInvoke("update_income", {
     id,
     req: {
       date,
@@ -138,7 +160,7 @@ export async function updateIncome(
 // ===================== Expenses =====================
 
 export async function getExpenses(property_id?: number): Promise<Expense[]> {
-  return invoke("get_expenses", { property_id });
+  return safeInvoke("get_expenses", { property_id });
 }
 
 export async function createExpense(
@@ -149,7 +171,7 @@ export async function createExpense(
   unit_id?: number | null,
   note?: string
 ): Promise<Expense> {
-  return invoke("create_expense", {
+  return safeInvoke("create_expense", {
     req: {
       date,
       amount,
@@ -170,7 +192,7 @@ export async function updateExpense(
   unit_id?: number | null,
   note?: string
 ): Promise<Expense> {
-  return invoke("update_expense", {
+  return safeInvoke("update_expense", {
     id,
     req: {
       date,
@@ -184,11 +206,17 @@ export async function updateExpense(
 }
 
 export async function deleteExpense(id: number): Promise<void> {
-  return invoke("delete_expense", { id });
+  return safeInvoke("delete_expense", { id });
+}
+
+// ===================== Analytics =====================
+
+export async function getForecastSummary(timelineMonths: number): Promise<ForecastSummary> {
+  return safeInvoke("get_forecast_summary", { timelineMonths });
 }
 
 // ===================== Dashboard =====================
 
 export async function getDashboardSummary(): Promise<DashboardSummary> {
-  return invoke("get_dashboard_summary");
+  return safeInvoke("get_dashboard_summary");
 }
