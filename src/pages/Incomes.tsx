@@ -1,0 +1,426 @@
+import React, { useEffect, useState } from "react";
+import { getIncomes, getUnits, createIncome, updateIncome } from "../lib/api";
+import { Income, Unit } from "../types";
+import { AlertCircle, Plus, DollarSign, Edit2 } from "lucide-react";
+
+export function Incomes() {
+  const [incomes, setIncomes] = useState<Income[]>([]);
+  const [units, setUnits] = useState<Unit[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [editingIncomeId, setEditingIncomeId] = useState<number | null>(null);
+  const [formData, setFormData] = useState({
+    date: new Date().toISOString().split("T")[0],
+    amount: "",
+    category: "Rent",
+    unit_id: "",
+    note: "",
+    status: "completed",
+  });
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  async function loadData() {
+    try {
+      setLoading(true);
+      setError(null);
+      const [incomesData, unitsData] = await Promise.all([
+        getIncomes(),
+        getUnits(),
+      ]);
+      setIncomes(incomesData);
+      setUnits(unitsData);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load data");
+      console.error("Load data error:", err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleSaveIncome(e: React.FormEvent) {
+    e.preventDefault();
+    try {
+      setError(null);
+      
+      if (editingIncomeId) {
+        // Update existing income
+        const updatedIncome = await updateIncome(
+          editingIncomeId,
+          formData.date,
+          parseFloat(formData.amount),
+          formData.category,
+          formData.unit_id ? parseInt(formData.unit_id) : null,
+          formData.note || undefined,
+          formData.status
+        );
+        setIncomes(incomes.map((i) => (i.id === editingIncomeId ? updatedIncome : i)));
+      } else {
+        // Create new income
+        const newIncome = await createIncome(
+          formData.date,
+          parseFloat(formData.amount),
+          formData.category,
+          formData.unit_id ? parseInt(formData.unit_id) : null,
+          formData.note || undefined,
+          formData.status
+        );
+        setIncomes([newIncome, ...incomes]);
+      }
+      
+      setShowForm(false);
+      setEditingIncomeId(null);
+      setFormData({
+        date: new Date().toISOString().split("T")[0],
+        amount: "",
+        category: "Rent",
+        unit_id: "",
+        note: "",
+        status: "completed",
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save income");
+      console.error("Save income error:", err);
+    }
+  }
+
+  function handleEditIncome(income: Income) {
+    setEditingIncomeId(income.id);
+    setFormData({
+      date: income.date,
+      amount: income.amount.toString(),
+      category: income.category,
+      unit_id: income.unit_id ? income.unit_id.toString() : "",
+      note: income.note || "",
+      status: income.status,
+    });
+    setShowForm(true);
+  }
+
+  function handleCancelEdit() {
+    setShowForm(false);
+    setEditingIncomeId(null);
+    setFormData({
+      date: new Date().toISOString().split("T")[0],
+      amount: "",
+      category: "Rent",
+      unit_id: "",
+      note: "",
+      status: "completed",
+    });
+  }
+
+  function getUnitLabel(unitId: number | null): string {
+    if (!unitId) return "Unassigned";
+    const unit = units.find((u) => u.id === unitId);
+    return unit ? `${unit.room_number}` : `Unit #${unitId}`;
+  }
+
+  function handleAmountChange(value: string) {
+    // 数字だけを抽出
+    const numericValue = value.replace(/\D/g, '');
+    setFormData({
+      ...formData,
+      amount: numericValue,
+    });
+  }
+
+  function getDisplayAmount(): string {
+    if (!formData.amount || formData.amount === '0') {
+      return formData.amount || '';
+    }
+    return parseInt(formData.amount, 10).toLocaleString('ja-JP');
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-gray-500">Loading incomes...</div>
+      </div>
+    );
+  }
+
+  const totalIncome = incomes.reduce((sum, income) => sum + income.amount, 0);
+  const pendingIncome = incomes
+    .filter((i) => i.status === "pending")
+    .reduce((sum, i) => sum + i.amount, 0);
+  const completedIncome = incomes
+    .filter((i) => i.status === "completed")
+    .reduce((sum, i) => sum + i.amount, 0);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-3xl font-bold text-gray-900">Incomes</h2>
+        <button
+          onClick={() => setShowForm(!showForm)}
+          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          <Plus className="w-5 h-5" />
+          Add Income
+        </button>
+      </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-gap-3">
+          <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+          <div>
+            <h3 className="font-semibold text-red-900">Error</h3>
+            <p className="text-red-700 text-sm">{error}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <SummaryCard
+          title="Total Income"
+          value={`¥${totalIncome.toLocaleString('ja-JP', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+          })}`}
+          color="bg-blue-50 text-blue-600"
+        />
+        <SummaryCard
+          title="Pending"
+          value={`¥${pendingIncome.toLocaleString('ja-JP', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+          })}`}
+          color="bg-yellow-50 text-yellow-600"
+        />
+        <SummaryCard
+          title="Completed"
+          value={`¥${completedIncome.toLocaleString('ja-JP', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+          })}`}
+          color="bg-emerald-50 text-emerald-600"
+        />
+      </div>
+
+      {/* Add/Edit Income Form */}
+      {showForm && (
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            {editingIncomeId ? "Edit Income" : "Add New Income"}
+          </h3>
+          <form onSubmit={handleSaveIncome} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Date
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={formData.date}
+                  onChange={(e) =>
+                    setFormData({ ...formData, date: e.target.value })
+                  }
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      (e.currentTarget as HTMLInputElement).blur();
+                    }
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Amount (¥)
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={getDisplayAmount()}
+                  onChange={(e) => handleAmountChange(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Category
+                </label>
+                <input
+                  type="text"
+                  value={formData.category}
+                  onChange={(e) =>
+                    setFormData({ ...formData, category: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g., Rent, Deposit"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Status
+                </label>
+                <select
+                  value={formData.status}
+                  onChange={(e) =>
+                    setFormData({ ...formData, status: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="completed">Completed (完了)</option>
+                  <option value="pending">Pending (待ち)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Unit (Optional)
+                </label>
+                <select
+                  value={formData.unit_id}
+                  onChange={(e) =>
+                    setFormData({ ...formData, unit_id: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">-- Select Unit --</option>
+                  {units.map((unit) => (
+                    <option key={unit.id} value={unit.id}>
+                      {unit.room_number}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Note (Optional)
+              </label>
+              <textarea
+                value={formData.note}
+                onChange={(e) =>
+                  setFormData({ ...formData, note: e.target.value })
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                rows={2}
+                placeholder="Add any notes..."
+              />
+            </div>
+            <div className="flex gap-3 pt-4">
+              <button
+                type="submit"
+                className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              >
+                {editingIncomeId ? "Update Income" : "Add Income"}
+              </button>
+              <button
+                type="button"
+                onClick={handleCancelEdit}
+                className="flex-1 bg-gray-200 text-gray-900 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Incomes Table */}
+      {incomes.length === 0 ? (
+        <div className="bg-white rounded-lg shadow p-12 text-center">
+          <DollarSign className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-500 text-lg">No incomes recorded</p>
+          <p className="text-gray-400 text-sm mt-1">
+            Add your first income entry to get started
+          </p>
+        </div>
+      ) : (
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-200">
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                    Date
+                  </th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                    Category
+                  </th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                    Unit
+                  </th>
+                  <th className="px-6 py-3 text-right text-sm font-semibold text-gray-900">
+                    Amount
+                  </th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                    Note
+                  </th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {incomes.map((income) => (
+                  <tr key={income.id} className="border-b border-gray-200 hover:bg-gray-50">
+                    <td className="px-6 py-4 text-sm text-gray-900">{income.date}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      {income.category}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      {getUnitLabel(income.unit_id)}
+                    </td>
+                    <td className="px-6 py-4 text-right text-sm font-medium text-emerald-600">
+                      ¥{income.amount.toLocaleString('ja-JP', {
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 0,
+                      })}
+                    </td>
+                    <td className="px-6 py-4 text-sm">
+                      <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
+                        income.status === "completed"
+                          ? "bg-emerald-100 text-emerald-700"
+                          : "bg-yellow-100 text-yellow-700"
+                      }`}>
+                        {income.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      {income.note || "-"}
+                    </td>
+                    <td className="px-6 py-4 text-sm space-x-2 flex">
+                      <button
+                        onClick={() => handleEditIncome(income)}
+                        className="inline-flex items-center gap-1 px-2 py-1 text-gray-700 border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+                      >
+                        <Edit2 className="w-3 h-3" />
+                        <span className="text-xs">Edit</span>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface SummaryCardProps {
+  title: string;
+  value: string;
+  color: string;
+}
+
+function SummaryCard({ title, value, color }: SummaryCardProps) {
+  return (
+    <div className={`rounded-lg shadow p-6 ${color}`}>
+      <p className="text-sm font-medium opacity-75">{title}</p>
+      <p className="text-2xl font-bold mt-2">{value}</p>
+    </div>
+  );
+}
