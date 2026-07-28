@@ -1,7 +1,14 @@
-# Tauri + React + Typescript
 
-This template should help get you started developing with Tauri, React and Typescript in Vite.
+```
+添付の spec.md に基づいて、Streamlit アプリケーション（app.py）の完全なソースコードを作成してください。
 
-## Recommended IDE Setup
+【実装上の制約・留意事項】
 
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+gspread を使用して Google スプレッドシートからデータを取得する処理は、@st.cache_data(ttl=600) を使用してキャッシュしてください（スプレッドシート認証は st.secrets を使用する実装にしてください）。
+
+yfinance からの価格取得処理も関数化し、処理が重くならないよう適切にキャッシュおよびデータ整形を行ってください。
+
+spec.md に記載されている画面構成（Total, Real Estate, Bond, Stock）を忠実に再現し、サイドバーの期間フィルター（1M, 3M, 6M...）で動的に集計範囲が切り替わるようにしてください。
+
+可読性とメンテナンス性を高めるため、モジュール化や例外処理（データが存在しない場合のフォールバック表示など）を適切に入れてください。
+```
